@@ -20,9 +20,20 @@ fetch_pokemon() {
 # Loop through Pokémon and run fetch in background
 for pokemon in "${pokemon_list[@]}"; do
     fetch_pokemon "$pokemon" &
+    pids+=($!)
 done
 
-# Wait for all background jobs to finish
-wait
+
+# wait for all jobs and check their status
+for pid in "${pids[@]}"; do
+    wait $pid || {
+        echo "Process $pid failed, killing all background jobs..."
+        # Kill all other jobs in pids array
+        for kill_pid in "${pids[@]}"; do
+            kill "$kill_pid" 2>/dev/null
+        done
+        exit 1
+    }
+done
 
 echo "✅ All fetch operations completed."
