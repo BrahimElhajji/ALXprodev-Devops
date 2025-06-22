@@ -1,22 +1,40 @@
 #!/bin/bash
 
-# Create directory if it doesn't exist
+# Create output directory if it doesn't exist
 mkdir -p pokemon_data
 
-# List of Pokémon
+# List of Pokémon to fetch
 pokemon_list=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+
+# Log file for errors
+error_log="errors.txt"
+> "$error_log"  # Clear previous errors
 
 # Loop through each Pokémon
 for pokemon in "${pokemon_list[@]}"; do
     echo "Fetching data for $pokemon..."
-    curl -s -f "https://pokeapi.co/api/v2/pokemon/$pokemon" -o "pokemon_data/${pokemon}.json"
     
-    if [ $? -eq 0 ]; then
-        echo "Saved data to pokemon_data/${pokemon}.json ✅"
-    else
-        echo "Failed to fetch data for $pokemon ❌"
+    attempts=0
+    success=false
+
+    while [ $attempts -lt 3 ]; do
+        # Try to fetch the data
+        if curl -s -f "https://pokeapi.co/api/v2/pokemon/$pokemon" -o "pokemon_data/${pokemon}.json"; then
+            echo "Saved data to pokemon_data/${pokemon}.json ✅"
+            success=true
+            break
+        else
+            echo "Attempt $((attempts + 1)) failed for $pokemon"
+            attempts=$((attempts + 1))
+            sleep 1  # Wait before retrying
+        fi
+    done
+
+    if ! $success; then
+        echo "Failed to fetch data for $pokemon after 3 attempts ❌" | tee -a "$error_log"
     fi
-    
-    # Delay to avoid rate limiting
+
+    # Short delay between Pokémon to avoid rate limits
     sleep 1
 done
+
